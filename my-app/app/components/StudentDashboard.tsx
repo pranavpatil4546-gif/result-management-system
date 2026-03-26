@@ -35,24 +35,24 @@ export default function StudentDashboard({ user, onLogout }: StudentDashboardPro
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchStudentData = async () => {
+      try {
+        const res = await fetch(`/api/students/${user.id}`);
+        const data = await res.json();
+
+        if (res.ok && data.student) {
+          setStudent(data.student);
+          setLeaderboard(data.leaderboard || []);
+        }
+      } catch (error) {
+        console.error('Error fetching student data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchStudentData();
   }, [user.id]);
-
-  const fetchStudentData = async () => {
-    try {
-      const res = await fetch(`/api/students/${user.id}`);
-      const data = await res.json();
-
-      if (res.ok && data.student) {
-        setStudent(data.student);
-        setLeaderboard(data.leaderboard || []);
-      }
-    } catch (error) {
-      console.error('Error fetching student data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getGradeClass = (grade: string) => {
     switch (grade) {

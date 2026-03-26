@@ -61,8 +61,8 @@ const StudentSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Pre-save hook to calculate total, percentage, and grade
-StudentSchema.pre('save', async function() {
+// Calculate derived fields before validation so required checks pass on create/update.
+StudentSchema.pre('validate', function(next) {
   if (this.isModified('marks') && this.marks) {
     const { maths, dataScience, dbms, computer } = this.marks;
     this.total = maths + dataScience + dbms + computer;
@@ -78,6 +78,8 @@ StudentSchema.pre('save', async function() {
       this.grade = 'F';
     }
   }
+
+  next();
 });
 
 export default mongoose.models.Student || mongoose.model('Student', StudentSchema);

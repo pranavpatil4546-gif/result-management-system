@@ -154,7 +154,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         <div className="topbar-right">
           <div className="chip">
             <div className="avatar admin">A</div>
-            <span>Admin</span>
+            <span>{user.name}</span>
           </div>
           <button className="btn-sm red" onClick={onLogout}>Sign Out</button>
         </div>

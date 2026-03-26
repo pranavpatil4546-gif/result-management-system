@@ -87,7 +87,30 @@ export async function POST(req: NextRequest) {
       });
     }
   } catch (error) {
-    console.error('Error saving student:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error saving student:', errorMessage, error);
+
+    if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('network')) {
+      return NextResponse.json(
+        { error: 'Database connection failed. Please check your network.' },
+        { status: 503 }
+      );
+    }
+
+    if (errorMessage.includes('MONGODB_URI')) {
+      return NextResponse.json(
+        { error: 'Database configuration error' },
+        { status: 500 }
+      );
+    }
+
+    if (errorMessage.includes('validation failed')) {
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to save student' },
       { status: 500 }

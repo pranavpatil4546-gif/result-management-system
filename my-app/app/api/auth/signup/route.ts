@@ -3,6 +3,27 @@ import { dbConnect } from '@/lib/db';
 import Student from '@/models/Student';
 import bcrypt from 'bcryptjs';
 
+function calculateStudentMetrics(marks: {
+  maths: number;
+  dataScience: number;
+  dbms: number;
+  computer: number;
+}) {
+  const total = marks.maths + marks.dataScience + marks.dbms + marks.computer;
+  const percentage = parseFloat(((total / 400) * 100).toFixed(2));
+
+  let grade = 'F';
+  if (percentage >= 75) {
+    grade = 'A';
+  } else if (percentage >= 60) {
+    grade = 'B';
+  } else if (percentage >= 40) {
+    grade = 'C';
+  }
+
+  return { total, percentage, grade };
+}
+
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
@@ -41,35 +62,20 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Calculate total and percentage
-    const maths = marks?.maths || 0;
-    const dataScience = marks?.dataScience || 0;
-    const dbms = marks?.dbms || 0;
-    const computer = marks?.computer || 0;
-
-    const total = maths + dataScience + dbms + computer;
-    const percentage = total / 4;
-
-    // Determine grade
-    let grade = 'F';
-    if (percentage >= 75) {
-      grade = 'A';
-    } else if (percentage >= 60) {
-      grade = 'B';
-    } else if (percentage >= 40) {
-      grade = 'C';
-    }
+    const normalizedMarks = {
+      maths: Number(marks?.maths ?? 0),
+      dataScience: Number(marks?.dataScience ?? 0),
+      dbms: Number(marks?.dbms ?? 0),
+      computer: Number(marks?.computer ?? 0),
+    };
+    const { total, percentage, grade } = calculateStudentMetrics(normalizedMarks);
 
     // Create student
     const student = await Student.create({
       studentId: studentId.toUpperCase(),
       name,
       password: hashedPassword,
-      marks: {
-        maths,
-        dataScience,
-        dbms,
-        computer,
-      },
+      marks: normalizedMarks,
       total,
       percentage,
       grade,
@@ -103,8 +109,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (errorMessage.toLowerCase().includes('authentication failed') || errorMessage.includes('bad auth')) {
+      return NextResponse.json(
+        { error: 'Database authentication failed. Check MongoDB username and password.' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: `Internal server error: ${errorMessage}` },
       { status: 500 }
     );
   }

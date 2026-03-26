@@ -3,6 +3,27 @@ import { dbConnect } from '@/lib/db';
 import Student from '@/models/Student';
 import bcrypt from 'bcryptjs';
 
+function calculateStudentMetrics(marks: {
+  maths: number;
+  dataScience: number;
+  dbms: number;
+  computer: number;
+}) {
+  const total = marks.maths + marks.dataScience + marks.dbms + marks.computer;
+  const percentage = parseFloat(((total / 400) * 100).toFixed(2));
+
+  let grade = 'F';
+  if (percentage >= 75) {
+    grade = 'A';
+  } else if (percentage >= 60) {
+    grade = 'B';
+  } else if (percentage >= 40) {
+    grade = 'C';
+  }
+
+  return { total, percentage, grade };
+}
+
 // GET - Fetch all students (for admin)
 export async function GET() {
   try {
@@ -40,11 +61,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate marks
-    const { maths, dataScience, dbms, computer } = marks;
+    const normalizedMarks = {
+      maths: Number(marks.maths),
+      dataScience: Number(marks.dataScience),
+      dbms: Number(marks.dbms),
+      computer: Number(marks.computer),
+    };
+
+    const { maths, dataScience, dbms, computer } = normalizedMarks;
     if (
       [maths, dataScience, dbms, computer].some(
-        (m: number) => m < 0 || m > 100
+        (m) => Number.isNaN(m) || m < 0 || m > 100
       )
     ) {
       return NextResponse.json(
@@ -52,6 +79,8 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const { total, percentage, grade } = calculateStudentMetrics(normalizedMarks);
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -63,7 +92,10 @@ export async function POST(req: NextRequest) {
       // Update existing student
       existingStudent.name = name;
       existingStudent.password = hashedPassword;
-      existingStudent.marks = marks;
+      existingStudent.marks = normalizedMarks;
+      existingStudent.total = total;
+      existingStudent.percentage = percentage;
+      existingStudent.grade = grade;
       await existingStudent.save();
 
       return NextResponse.json({
@@ -77,7 +109,10 @@ export async function POST(req: NextRequest) {
         studentId: studentId.toUpperCase(),
         name,
         password: hashedPassword,
-        marks,
+        marks: normalizedMarks,
+        total,
+        percentage,
+        grade,
       });
 
       return NextResponse.json({
@@ -111,8 +146,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (errorMessage.toLowerCase().includes('authentication failed')) {
+      return NextResponse.json(
+        { error: 'Database authentication failed. Check MongoDB username and password.' },
+        { status: 500 }
+      );
+    }
+
+    if (errorMessage.includes('bad auth')) {
+      return NextResponse.json(
+        { error: 'Database authentication failed. Check MongoDB username and password.' },
+        { status: 500 }
+      );
+    }
+
+    if (errorMessage.includes('buffering timed out')) {
+      return NextResponse.json(
+        { error: 'Database request timed out while connecting.' },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Failed to save student' },
+      { error: `Failed to save student: ${errorMessage}` },
       { status: 500 }
     );
   }

@@ -1,18 +1,11 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || '';
-
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
-}
-
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var mongoose: MongooseCache | undefined;
 }
 
@@ -22,17 +15,28 @@ if (!global.mongoose) {
   global.mongoose = cached;
 }
 
+function getMongoUri() {
+  const mongoUri = process.env.MONGODB_URI?.trim();
+
+  if (!mongoUri) {
+    throw new Error('Please define the MONGODB_URI environment variable');
+  }
+
+  return mongoUri;
+}
+
 export async function dbConnect() {
   if (cached.conn) {
     return cached.conn;
   }
 
   if (!cached.promise) {
+    const mongoUri = getMongoUri();
     const opts = {
       bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+    cached.promise = mongoose.connect(mongoUri, opts).then((mongoose) => {
       return mongoose;
     });
   }

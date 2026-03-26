@@ -5,9 +5,8 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(req: NextRequest) {
   try {
-    await dbConnect();
-    
-    const { userId, password, role } = await req.json();
+    const body = await req.json();
+    const { userId, password, role } = body;
 
     if (!userId || !password) {
       return NextResponse.json(
@@ -32,8 +31,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Student login
+    if (role !== 'student') {
+      return NextResponse.json(
+        { error: 'Invalid role specified' },
+        { status: 400 }
+      );
+    }
+
+    await dbConnect();
+
     const student = await Student.findOne({ studentId: userId.toUpperCase() });
-    
+
     if (!student) {
       return NextResponse.json(
         { error: 'Student ID not found. Contact your admin.' },
@@ -42,7 +50,7 @@ export async function POST(req: NextRequest) {
     }
 
     const isPasswordValid = await bcrypt.compare(password, student.password);
-    
+
     if (!isPasswordValid) {
       return NextResponse.json(
         { error: 'Incorrect password' },
@@ -59,7 +67,24 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Login error:', errorMessage, error);
+    
+    // Check for specific MongoDB errors
+    if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('network')) {
+      return NextResponse.json(
+        { error: 'Database connection failed. Please check your network.' },
+        { status: 503 }
+      );
+    }
+    
+    if (errorMessage.includes('MONGODB_URI')) {
+      return NextResponse.json(
+        { error: 'Database configuration error' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

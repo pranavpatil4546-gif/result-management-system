@@ -3,12 +3,15 @@ import { dbConnect } from '@/lib/db';
 import Student from '@/models/Student';
 
 // GET - Fetch a single student's result
-export async function GET(req: NextRequest) {
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     await dbConnect();
-    
-    const { searchParams } = new URL(req.url);
-    const studentId = searchParams.get('id');
+
+    const { id } = await params;
+    const studentId = id?.trim();
 
     if (!studentId) {
       return NextResponse.json(

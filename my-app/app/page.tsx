@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import LoginPage from './components/LoginPage';
+import SignupPage from './components/SignupPage';
 import AdminDashboard from './components/AdminDashboard';
 import StudentDashboard from './components/StudentDashboard';
 
@@ -11,22 +12,30 @@ interface User {
   name: string;
 }
 
+type PageView = 'login' | 'signup';
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState<PageView>('login');
 
   useEffect(() => {
-    // Check for saved session
-    const savedSession = localStorage.getItem('rms_session');
-    if (savedSession) {
-      try {
-        const parsed = JSON.parse(savedSession);
-        setUser(parsed);
-      } catch (e) {
-        localStorage.removeItem('rms_session');
+    const timeoutId = window.setTimeout(() => {
+      const savedSession = localStorage.getItem('rms_session');
+
+      if (savedSession) {
+        try {
+          const parsed = JSON.parse(savedSession) as User;
+          setUser(parsed);
+        } catch {
+          localStorage.removeItem('rms_session');
+        }
       }
-    }
-    setLoading(false);
+
+      setLoading(false);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   const handleLogin = (userData: User) => {
@@ -37,6 +46,10 @@ export default function Home() {
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('rms_session');
+  };
+
+  const handleSignupComplete = () => {
+    setCurrentPage('login');
   };
 
   if (loading) {
@@ -57,5 +70,9 @@ export default function Home() {
     return <StudentDashboard user={user} onLogout={handleLogout} />;
   }
 
-  return <LoginPage onLogin={handleLogin} />;
+  if (currentPage === 'signup') {
+    return <SignupPage onSignupComplete={handleSignupComplete} />;
+  }
+
+  return <LoginPage onLogin={handleLogin} onNavigateToSignup={() => setCurrentPage('signup')} />;
 }

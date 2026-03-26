@@ -4,9 +4,10 @@ import { useState } from 'react';
 
 interface LoginPageProps {
   onLogin: (user: { id: string; role: 'admin' | 'student'; name: string }) => void;
+  onNavigateToSignup: () => void;
 }
 
-export default function LoginPage({ onLogin }: LoginPageProps) {
+export default function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps) {
   const [role, setRole] = useState<'student' | 'admin'>('student');
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
@@ -96,6 +97,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             {loading ? 'Signing in...' : 'Sign In →'}
           </button>
         </form>
+
+        <div style={{ marginTop: '16px', textAlign: 'center' }}>
+          <button type="button" className="btn-sm" onClick={onNavigateToSignup}>
+            Register a student
+          </button>
+        </div>
 
         <div className="hint-box">
           {role === 'admin' ? (

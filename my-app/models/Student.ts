@@ -62,7 +62,7 @@ const StudentSchema = new mongoose.Schema({
 });
 
 // Calculate derived fields before validation so required checks pass on create/update.
-StudentSchema.pre('validate', function(next) {
+StudentSchema.pre('validate', function() {
   if (this.isModified('marks') && this.marks) {
     const { maths, dataScience, dbms, computer } = this.marks;
     this.total = maths + dataScience + dbms + computer;
@@ -78,8 +78,6 @@ StudentSchema.pre('validate', function(next) {
       this.grade = 'F';
     }
   }
-
-  next();
 });
 
 export default mongoose.models.Student || mongoose.model('Student', StudentSchema);
